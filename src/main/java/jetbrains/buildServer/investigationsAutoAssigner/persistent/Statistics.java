@@ -66,4 +66,9 @@ class Statistics implements Cloneable {
   protected Statistics clone() {
     return new Statistics(version, values);
   }
+
+  @Override
+  public int hashCode() {
+    return 31 * version.hashCode() + values.hashCode();
+  }
 }
