@@ -1,0 +1,60 @@
+package jetbrains.buildServer.investigationsAutoAssigner.utils;
+
+import java.util.concurrent.atomic.AtomicInteger;
+import jetbrains.buildServer.BuildProblemTypes;
+import jetbrains.buildServer.investigationsAutoAssigner.common.Constants;
+import jetbrains.buildServer.serverSide.SBuild;
+import jetbrains.buildServer.serverSide.TeamCityProperties;
+import jetbrains.buildServer.serverSide.problems.BuildLogCompileErrorCollector;
+import jetbrains.buildServer.serverSide.problems.BuildProblem;
+import jetbrains.buildServer.util.StringUtil;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import static jetbrains.buildServer.serverSide.impl.problems.types.CompilationErrorTypeDetailsProvider.COMPILE_BLOCK_INDEX;
+
+public class CompilationErrorTextExtractor implements ProblemTextExtractorExtension {
+  @Override
+  public boolean supports(@NotNull BuildProblem problem) {
+    return problem.getBuildProblemData().getType().equals(BuildProblemTypes.TC_COMPILATION_ERROR_TYPE);
+  }
+
+  @Override
+  @Nullable
+  public String extractText(@NotNull BuildProblem problem, @NotNull SBuild build) {
+    return getBuildProblemText(problem, build);
+  }
+
+  private String getBuildProblemText(@NotNull final BuildProblem problem, @NotNull final SBuild build) {
+    if (!problem.getBuildProblemData().getType().equals(BuildProblemTypes.TC_COMPILATION_ERROR_TYPE)) {
+      return null;
+    }
+
+    StringBuilder problemSpecificText = new StringBuilder();
+
+    final Integer compileBlockIndex = getCompileBlockIndex(problem);
+    if (compileBlockIndex != null) {
+      AtomicInteger
+        maxErrors = new AtomicInteger(TeamCityProperties.getInteger(Constants.MAX_COMPILE_ERRORS_TO_PROCESS, 100));
+      BuildLogCompileErrorCollector.collectCompileErrors(compileBlockIndex, build, item -> {
+        problemSpecificText.append(item.getText()).append(" ");
+        return maxErrors.decrementAndGet() > 0;
+      });
+    }
+
+    return problemSpecificText + " " + problem.getBuildProblemDescription();
+  }
+
+  @Nullable
+  private static Integer getCompileBlockIndex(@NotNull final BuildProblem problem) {
+    final String compilationBlockIndex = problem.getBuildProblemData().getAdditionalData();
+    if (compilationBlockIndex == null) return null;
+
+    try {
+      return Integer.parseInt(
+        StringUtil.stringToProperties(compilationBlockIndex, StringUtil.STD_ESCAPER2).get(COMPILE_BLOCK_INDEX));
+    } catch (Exception e) {
+      return null;
+    }
+  }
+}
