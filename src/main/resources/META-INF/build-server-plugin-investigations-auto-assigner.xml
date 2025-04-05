@@ -55,4 +55,12 @@
   <bean class="jetbrains.buildServer.investigationsAutoAssigner.persistent.SuggestionsDao"/>
   <bean class="jetbrains.buildServer.investigationsAutoAssigner.persistent.AssignerResultsFilePath"/>
   <bean class="jetbrains.buildServer.investigationsAutoAssigner.processing.ModificationAnalyzerFactory"/>
+  <bean id="problemTextExtractor" class="jetbrains.buildServer.investigationsAutoAssigner.utils.ProblemTextExtractor">
+    <!-- Register default extensions -->
+    <constructor-arg index="0">
+      <list>
+        <bean class="jetbrains.buildServer.investigationsAutoAssigner.utils.CompilationErrorTextExtractor"/>
+      </list>
+    </constructor-arg>
+  </bean>
 </beans>
